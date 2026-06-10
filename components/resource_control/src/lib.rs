@@ -2,13 +2,14 @@
 #![feature(test)]
 #![feature(let_chains)]
 
-use std::sync::{Arc, atomic::AtomicU32};
+use std::sync::{atomic::AtomicU32, Arc};
 
 use pd_client::RpcClient;
 
 mod resource_group;
 pub use resource_group::{
-    ResourceConsumeType, ResourceController, ResourceGroupManager, MIN_PRIORITY_UPDATE_INTERVAL,
+    AdmissionDecision, DelaySlotGuard, ResourceConsumeType, ResourceController,
+    ResourceGroupManager, MIN_PRIORITY_UPDATE_INTERVAL,
 };
 pub use tikv_util::resource_control::*;
 
@@ -29,7 +30,7 @@ pub mod config;
 mod resource_limiter;
 pub use resource_limiter::ResourceLimiter;
 use tikv_util::worker::Worker;
-use worker::{GroupQuotaAdjustWorker, BACKGROUND_LIMIT_ADJUST_DURATION};
+use worker::{GroupQuotaAdjustWorker, QUOTA_ADJUST_DURATION};
 
 mod metrics;
 pub mod worker;
@@ -60,7 +61,7 @@ pub fn start_periodic_tasks(
     // We disable the priority worker by default because the current adjust
     // algorithm is buggy. We may reenable it only we find a better algorithm.
     // let mut priority_worker = PriorityLimiterAdjustWorker::new(mgr.clone());
-    bg_worker.spawn_interval_task(BACKGROUND_LIMIT_ADJUST_DURATION, move || {
+    bg_worker.spawn_interval_task(QUOTA_ADJUST_DURATION, move || {
         worker.adjust_quota();
         // priority_worker.adjust();
     });

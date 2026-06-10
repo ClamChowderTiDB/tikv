@@ -17,9 +17,8 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::{
-        Arc, Mutex,
         atomic::{AtomicU32, AtomicU64},
-        mpsc,
+        mpsc, Arc, Mutex,
     },
     time::Duration,
     u64,
@@ -627,6 +626,7 @@ where
                 pd_sender.clone(),
                 engines.engine.clone(),
                 resource_ctl,
+                self.resource_manager.clone(),
                 CleanupMethod::Remote(self.core.background_worker.remote()),
                 true,
             ))
@@ -1930,7 +1930,7 @@ fn pre_start() {
 mod test {
     use std::{
         collections::HashMap,
-        sync::{Arc, atomic::AtomicU32},
+        sync::{atomic::AtomicU32, Arc},
     };
 
     use engine_rocks::raw::Env;
