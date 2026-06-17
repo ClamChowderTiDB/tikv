@@ -345,8 +345,9 @@ impl<R: ResourceStatsProvider> GroupQuotaAdjustWorker<R> {
 
     /// Adjust the write-only IO limiter based on compaction pressure.
     /// When pressure >= threshold, linearly scale write IO from ceiling to
-    /// floor. Below threshold, write IO ramps up 10% per tick capped at
-    /// ceiling.
+    /// floor over a window of 50% of threshold (i.e. threshold to
+    /// threshold * 1.5). Below threshold, write IO ramps up 10% per tick
+    /// capped at ceiling.
     fn adjust_write_io_by_compaction_pressure(&self) {
         let pressure = self.compaction_pending_bytes_ratio.load(Ordering::Relaxed) as f64;
         let config = self.resource_ctl.get_config().value().clone();
@@ -363,9 +364,11 @@ impl<R: ResourceStatsProvider> GroupQuotaAdjustWorker<R> {
                 (current_limit * 1.1).min(ceiling)
             }
         } else {
-            // Linear interpolation from ceiling to floor as pressure goes from
-            // threshold to 100%.
-            let pressure_ratio = ((pressure - threshold) / (100.0 - threshold)).clamp(0.0, 1.0);
+            // Linear interpolation from ceiling to floor over the window
+            // [threshold, threshold * 1.5]. Beyond that window the rate is
+            // clamped to floor.
+            let window = threshold * 0.5;
+            let pressure_ratio = ((pressure - threshold) / window).clamp(0.0, 1.0);
             (ceiling * (1.0 - pressure_ratio) + floor * pressure_ratio).max(floor)
         };
 
@@ -1263,12 +1266,16 @@ mod tests {
             5.6 * MICROS_PER_SEC,
         );
 
-        // Pressure = 85: pressure_ratio = (85-70)/(100-70) = 0.5
-        // budget = ceiling * 0.5 + floor * 0.5
+        // Pressure = 85: window = [70, 105], pressure_ratio = (85-70)/35 ≈ 0.429
+        // budget = ceiling * 0.571 + floor * 0.429
         compaction_pending_bytes_ratio.store(85, Ordering::Relaxed);
         reset_quota(&mut worker, 0.0, 0.0, Duration::from_secs(1));
         worker.adjust_quota();
-        let expected_85 = ceiling * 0.5 + floor * 0.5;
+        let window = 70.0 * 0.5; // threshold * 0.5 = 35
+        let expected_85 = {
+            let r = ((85.0_f64 - 70.0) / window).clamp(0.0, 1.0);
+            ceiling * (1.0 - r) + floor * r
+        };
         check(limiter.get_write_io_limiter().get_rate_limit(), expected_85);
 
         // CPU limit unaffected.
@@ -1277,17 +1284,32 @@ mod tests {
             5.6 * MICROS_PER_SEC,
         );
 
-        // Pressure = 100: pressure_ratio = 1.0 → budget = floor (10 MB/s).
+        // Pressure = 100: pressure_ratio = (100-70)/35 ≈ 0.857 → well below floor
+        // clamp. budget = ceiling * 0.143 + floor * 0.857
         compaction_pending_bytes_ratio.store(100, Ordering::Relaxed);
         reset_quota(&mut worker, 0.0, 0.0, Duration::from_secs(1));
         worker.adjust_quota();
-        check(limiter.get_write_io_limiter().get_rate_limit(), floor);
+        let expected_100 = {
+            let r = ((100.0_f64 - 70.0) / window).clamp(0.0, 1.0);
+            ceiling * (1.0 - r) + floor * r
+        };
+        check(
+            limiter.get_write_io_limiter().get_rate_limit(),
+            expected_100,
+        );
 
         // CPU limit unaffected.
         check(
             limiter.get_limiter(ResourceType::Cpu).get_rate_limit(),
             5.6 * MICROS_PER_SEC,
         );
+
+        // Pressure = 106 (>= threshold * 1.5 = 105): pressure_ratio clamped to 1.0 →
+        // floor.
+        compaction_pending_bytes_ratio.store(106, Ordering::Relaxed);
+        reset_quota(&mut worker, 0.0, 0.0, Duration::from_secs(1));
+        worker.adjust_quota();
+        check(limiter.get_write_io_limiter().get_rate_limit(), floor);
 
         // Pressure drops to 0 (< threshold): ramp up by 10% from floor.
         // floor * 1.1 = 10 MB/s * 1.1 = 11534336
