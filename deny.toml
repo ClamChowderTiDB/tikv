@@ -115,6 +115,13 @@ ignore = [
     # azure_core and is unmaintained with no fix available. TiKV does not
     # construct Authorization or WwwAuthenticate headers with non-ASCII input.
     "RUSTSEC-2026-0174",
+    # Ignore RUSTSEC-2026-0186 (unsound issue in memmap2: unchecked pointer
+    # offset in Mmap::advise_range). memmap2 is a transitive dependency with no
+    # fix available on the release branch.
+    "RUSTSEC-2026-0186",
+    # Ignore RUSTSEC-2022-0104 because structopt is only used by tikv-ctl and
+    # does not affect the server runtime. This is safe to ignore.
+    "RUSTSEC-2022-0104",
 ]
 
 # TiKV is licensed under Apache 2.0, according to ASF 3RD PARTY LICENSE POLICY,
