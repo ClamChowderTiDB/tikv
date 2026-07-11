@@ -122,6 +122,24 @@ ignore = [
     # Ignore RUSTSEC-2022-0104 because structopt is only used by tikv-ctl and
     # does not affect the server runtime. This is safe to ignore.
     "RUSTSEC-2022-0104",
+    # Ignore RUSTSEC-2026-0190 (unsound `Error::downcast_mut()` in anyhow). The
+    # UB only triggers when context is added via `Error::context` and later
+    # `downcast_mut` is called on the returned error; TiKV does not use that
+    # pattern. No fix available on the release branch's pinned anyhow.
+    "RUSTSEC-2026-0190",
+    # Ignore RUSTSEC-2026-0204 (invalid pointer dereference in the `fmt::Pointer`
+    # impl for crossbeam-epoch's `Atomic`/`Shared`). Only reachable by formatting
+    # a null/invalid `Atomic`/`Shared` via `fmt::Display`, which TiKV does not do.
+    "RUSTSEC-2026-0204",
+    # Ignore RUSTSEC-2026-0194 (quadratic runtime checking a start tag for
+    # duplicate attribute names in quick-xml). quick-xml is pulled in transitively
+    # via the azure SDK and only parses trusted responses; no fix available on the
+    # release branch.
+    "RUSTSEC-2026-0194",
+    # Ignore RUSTSEC-2026-0195 (unbounded namespace-declaration allocation in
+    # quick-xml's `NsReader`, memory-exhaustion DoS). Same transitive azure SDK
+    # dependency parsing trusted responses; no fix available on the release branch.
+    "RUSTSEC-2026-0195",
 ]
 
 # TiKV is licensed under Apache 2.0, according to ASF 3RD PARTY LICENSE POLICY,
