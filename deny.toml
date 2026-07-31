@@ -140,6 +140,13 @@ ignore = [
     # quick-xml's `NsReader`, memory-exhaustion DoS). Same transitive azure SDK
     # dependency parsing trusted responses; no fix available on the release branch.
     "RUSTSEC-2026-0195",
+    # Ignore RUSTSEC-2026-0221 (unsound `Send`/`Sync` impl for `StackSlot<'_, T>`
+    # in event-listener 5.x, affects >=5.1.0 <5.4.2). Pulled in transitively via
+    # async-channel/async-lock (event-listener-strategy), which only use plain
+    # `Event::listen()` and do not use `Event::with_tag` with non-`Send` tag
+    # types, so the unsound path is not reachable. No fix available on the
+    # release branch's pinned version yet.
+    "RUSTSEC-2026-0221",
 ]
 
 # TiKV is licensed under Apache 2.0, according to ASF 3RD PARTY LICENSE POLICY,
