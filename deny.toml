@@ -147,6 +147,13 @@ ignore = [
     # types, so the unsound path is not reachable. No fix available on the
     # release branch's pinned version yet.
     "RUSTSEC-2026-0221",
+    # Ignore RUSTSEC-2026-0253 for now: Cargo.lock shows `lru` 0.12.5 is pulled
+    # in only via `aws-sdk-s3`. The advisory is only relevant when unwinding
+    # panics are enabled and `std::panic::catch_unwind` is used with key types
+    # that may panic in `Drop`.
+    #
+    # See: https://rustsec.org/advisories/RUSTSEC-2026-0253
+    "RUSTSEC-2026-0253",
 ]
 
 # TiKV is licensed under Apache 2.0, according to ASF 3RD PARTY LICENSE POLICY,
