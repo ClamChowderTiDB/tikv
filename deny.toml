@@ -159,6 +159,11 @@ ignore = [
     # the AWS SDK for outbound requests, not the gRPC service path (grpcio). The
     # fix only exists in h2 0.4.16, which requires a hyper 0.14 -> 1.x migration.
     "RUSTSEC-2026-0258",
+    # Ignore RUSTSEC-2026-0275 because we do not run on azure.
+    # See:
+    #   
+    #   https://rustsec.org/advisories/RUSTSEC-2026-0275.html
+    "RUSTSEC-2026-0275",
 ]
 
 # TiKV is licensed under Apache 2.0, according to ASF 3RD PARTY LICENSE POLICY,
