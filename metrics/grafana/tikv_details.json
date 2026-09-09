@@ -81691,7 +81691,7 @@
           "bars": false,
           "cacheTimeout": null,
           "datasource": "${DS_TEST-CLUSTER}",
-          "description": "Historical baseline and current CPU utilization % per resource group (100% = 1 core).",
+          "description": "Historical (live sliding average), baseline (frozen while the group is selected as noisy) and current CPU utilization % per resource group (100% = 1 core).",
           "editable": true,
           "error": false,
           "fieldConfig": {
@@ -81770,6 +81770,21 @@
               "legendFormat": "historical-{{resource_group}}",
               "metric": "",
               "query": "sum((\n    tikv_resource_control_group_ru_historical_rate\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    \n)) by (resource_group)  > 0",
+              "refId": "",
+              "step": 10,
+              "target": ""
+            },
+            {
+              "datasource": "${DS_TEST-CLUSTER}",
+              "expr": "sum((\n    tikv_resource_control_group_ru_baseline\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    \n)) by (resource_group)  > 0",
+              "format": "time_series",
+              "hide": false,
+              "instant": false,
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "baseline-{{resource_group}}",
+              "metric": "",
+              "query": "sum((\n    tikv_resource_control_group_ru_baseline\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    \n)) by (resource_group)  > 0",
               "refId": "",
               "step": 10,
               "target": ""
@@ -81972,7 +81987,7 @@
           "bars": false,
           "cacheTimeout": null,
           "datasource": "${DS_TEST-CLUSTER}",
-          "description": "Historical (floor), current (measured), and target (foreground-pressure-driven ceiling) CPU usage of the unified read pool, as a percentage of one core (100 = 1 core).",
+          "description": "Historical (live sliding average), baseline (floor frozen at overload onset), current (measured), and target (foreground-pressure-driven ceiling) CPU usage of the unified read pool, as a percentage of one core (100 = 1 core).",
           "editable": true,
           "error": false,
           "fieldConfig": {
@@ -82821,7 +82836,7 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 24,
+            "w": 12,
             "x": 0,
             "y": 21
           },
@@ -82957,6 +82972,154 @@
             "align": false,
             "alignLevel": 0
           }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "cacheTimeout": null,
+          "datasource": "${DS_TEST-CLUSTER}",
+          "description": "Requests rejected before they enter the unified read pool, per resource group. `busy-threshold` is the client's own gate, sent as `busy_threshold_ms` from TiDB's `tidb_load_based_replica_read_threshold`: TiKV answers ServerIsBusy with its estimated wait and the client retries the read on an idle follower, so a high rate here is a redirect signal, not an error rate. `pool-full` is the queue capacity gate and has no such fallback -- the client sees a retry against the same leader.",
+          "editable": true,
+          "error": false,
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "mode": "absolute",
+                "steps": []
+              }
+            }
+          },
+          "fill": 1,
+          "fillGradient": 1,
+          "grid": {
+            "threshold1": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2": null,
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 21
+          },
+          "height": null,
+          "hideTimeOverride": false,
+          "id": 607,
+          "interval": null,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "hideEmpty": true,
+            "hideZero": true,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "sideWidth": null,
+            "sort": "max",
+            "sortDesc": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "maxDataPoints": null,
+          "maxPerRow": null,
+          "minSpan": null,
+          "nullPointMode": "null as zero",
+          "options": {
+            "alertThreshold": true,
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": null,
+          "seriesOverrides": [],
+          "span": null,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "datasource": "${DS_TEST-CLUSTER}",
+              "expr": "sum(rate(\n    tikv_unified_read_pool_busy_threshold_rejected_total\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    [$__rate_interval]\n)) by (resource_group)  > 0",
+              "format": "time_series",
+              "hide": false,
+              "instant": false,
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "busy-threshold-{{resource_group}}",
+              "metric": "",
+              "query": "sum(rate(\n    tikv_unified_read_pool_busy_threshold_rejected_total\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    [$__rate_interval]\n)) by (resource_group)  > 0",
+              "refId": "",
+              "step": 10,
+              "target": ""
+            },
+            {
+              "datasource": "${DS_TEST-CLUSTER}",
+              "expr": "sum(rate(\n    tikv_unified_read_pool_full_rejected_total\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    [$__rate_interval]\n)) by (resource_group)  > 0",
+              "format": "time_series",
+              "hide": false,
+              "instant": false,
+              "interval": "",
+              "intervalFactor": 1,
+              "legendFormat": "pool-full-{{resource_group}}",
+              "metric": "",
+              "query": "sum(rate(\n    tikv_unified_read_pool_full_rejected_total\n    {k8s_cluster=\"$k8s_cluster\",tidb_cluster=\"$tidb_cluster\",instance=~\"$instance\"}\n    [$__rate_interval]\n)) by (resource_group)  > 0",
+              "refId": "",
+              "step": 10,
+              "target": ""
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Read Pool Rejections",
+          "tooltip": {
+            "msResolution": true,
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "transformations": [],
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "decimals": null,
+              "format": "ops",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "decimals": null,
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": 0
+          }
         }
       ],
       "repeat": null,
@@ -82993,7 +83156,7 @@
       },
       "height": null,
       "hideTimeOverride": false,
-      "id": 607,
+      "id": 608,
       "interval": null,
       "links": [],
       "maxDataPoints": 100,
@@ -83032,7 +83195,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 608,
+          "id": 609,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -83233,7 +83396,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 609,
+          "id": 610,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -83369,7 +83532,7 @@
       },
       "height": null,
       "hideTimeOverride": false,
-      "id": 610,
+      "id": 611,
       "interval": null,
       "links": [],
       "maxDataPoints": 100,
@@ -83408,7 +83571,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 611,
+          "id": 612,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -83541,7 +83704,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 612,
+          "id": 613,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -83674,7 +83837,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 613,
+          "id": 614,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -83807,7 +83970,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 614,
+          "id": 615,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -83940,7 +84103,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 615,
+          "id": 616,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -84088,7 +84251,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 616,
+          "id": 617,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -84292,7 +84455,7 @@
       },
       "height": null,
       "hideTimeOverride": false,
-      "id": 617,
+      "id": 618,
       "interval": null,
       "links": [],
       "maxDataPoints": 100,
@@ -84331,7 +84494,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 618,
+          "id": 619,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -84464,7 +84627,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 619,
+          "id": 620,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -84597,7 +84760,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 620,
+          "id": 621,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -84730,7 +84893,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 621,
+          "id": 622,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -84863,7 +85026,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 622,
+          "id": 623,
           "interval": null,
           "isNew": true,
           "legend": {
@@ -85060,7 +85223,7 @@
           },
           "height": null,
           "hideTimeOverride": false,
-          "id": 623,
+          "id": 624,
           "interval": null,
           "links": [],
           "maxDataPoints": 100,

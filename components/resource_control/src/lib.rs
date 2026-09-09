@@ -9,7 +9,8 @@ use pd_client::RpcClient;
 mod resource_group;
 pub use resource_group::{
     AdmissionDecision, DelaySlotGuard, ResourceConsumeType, ResourceController,
-    ResourceGroupManager, MIN_PRIORITY_UPDATE_INTERVAL,
+    ResourceGroupManager, CONTROL_TICK, LEEWAY_FACTOR, LEEWAY_FRACTION,
+    MIN_PRIORITY_UPDATE_INTERVAL,
 };
 pub use tikv_util::resource_control::*;
 
@@ -30,7 +31,7 @@ pub mod config;
 mod resource_limiter;
 pub use resource_limiter::ResourceLimiter;
 use tikv_util::worker::Worker;
-use worker::{GroupQuotaAdjustWorker, QUOTA_ADJUST_DURATION};
+use worker::GroupQuotaAdjustWorker;
 
 mod metrics;
 pub use metrics::READ_POOL_CPU_VEC;
@@ -73,7 +74,7 @@ pub fn start_periodic_tasks(
     // We disable the priority worker by default because the current adjust
     // algorithm is buggy. We may reenable it only we find a better algorithm.
     // let mut priority_worker = PriorityLimiterAdjustWorker::new(mgr.clone());
-    bg_worker.spawn_interval_task(QUOTA_ADJUST_DURATION, move || {
+    bg_worker.spawn_interval_task(CONTROL_TICK, move || {
         worker.adjust_quota();
         // priority_worker.adjust();
     });

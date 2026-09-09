@@ -10368,7 +10368,7 @@ def LoadShedding() -> RowPanel:
         [
             graph_panel(
                 title="CPU Utilization % per Resource Group",
-                description="Historical baseline and current CPU utilization % per resource group (100% = 1 core).",
+                description="Historical (live sliding average), baseline (frozen while the group is selected as noisy) and current CPU utilization % per resource group (100% = 1 core).",
                 yaxes=yaxes(left_format=UNITS.PERCENT_FORMAT),
                 targets=[
                     target(
@@ -10377,6 +10377,13 @@ def LoadShedding() -> RowPanel:
                             by_labels=["resource_group"],
                         ).extra(" > 0"),
                         legend_format="historical-{{resource_group}}",
+                    ),
+                    target(
+                        expr=expr_sum(
+                            "tikv_resource_control_group_ru_baseline",
+                            by_labels=["resource_group"],
+                        ).extra(" > 0"),
+                        legend_format="baseline-{{resource_group}}",
                     ),
                     target(
                         expr=expr_sum(
@@ -10402,7 +10409,7 @@ def LoadShedding() -> RowPanel:
             ),
             graph_panel(
                 title="Unified Read Pool CPU",
-                description="Historical (floor), current (measured), and target (foreground-pressure-driven ceiling) CPU usage of the unified read pool, as a percentage of one core (100 = 1 core).",
+                description="Historical (live sliding average), baseline (floor frozen at overload onset), current (measured), and target (foreground-pressure-driven ceiling) CPU usage of the unified read pool, as a percentage of one core (100 = 1 core).",
                 yaxes=yaxes(left_format=UNITS.PERCENT_FORMAT),
                 targets=[
                     target(
@@ -10536,6 +10543,27 @@ def LoadShedding() -> RowPanel:
                         ),
                         legend_format="avg-{{resource_group}}",
                         additional_groupby=True,
+                    ),
+                ],
+            ),
+            graph_panel(
+                title="Read Pool Rejections",
+                description="Requests rejected before they enter the unified read pool, per resource group. `busy-threshold` is the client's own gate, sent as `busy_threshold_ms` from TiDB's `tidb_load_based_replica_read_threshold`: TiKV answers ServerIsBusy with its estimated wait and the client retries the read on an idle follower, so a high rate here is a redirect signal, not an error rate. `pool-full` is the queue capacity gate and has no such fallback -- the client sees a retry against the same leader.",
+                yaxes=yaxes(left_format=UNITS.OPS_PER_SEC),
+                targets=[
+                    target(
+                        expr=expr_sum_rate(
+                            "tikv_unified_read_pool_busy_threshold_rejected_total",
+                            by_labels=["resource_group"],
+                        ).extra(" > 0"),
+                        legend_format="busy-threshold-{{resource_group}}",
+                    ),
+                    target(
+                        expr=expr_sum_rate(
+                            "tikv_unified_read_pool_full_rejected_total",
+                            by_labels=["resource_group"],
+                        ).extra(" > 0"),
+                        legend_format="pool-full-{{resource_group}}",
                     ),
                 ],
             ),
